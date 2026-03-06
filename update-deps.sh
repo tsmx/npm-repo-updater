@@ -77,8 +77,15 @@ for REL_PATH in "${REPOS[@]}"; do
     continue
   fi
 
+  ORIG_HEAD=$(git rev-parse HEAD)
+
   log "→ npm update…"
-  npm update
+  if ! npm update; then
+    log "❌ npm update failed – reverting changes."
+    git reset --hard "$ORIG_HEAD"
+    STATUS["$REL_PATH"]="Error"
+    continue
+  fi
 
   log "→ Checking changes in package-lock.json…"
   if git diff --quiet -- package-lock.json; then
@@ -89,19 +96,20 @@ for REL_PATH in "${REPOS[@]}"; do
 
   log "→ Changes found. Running npm run test…"
   if ! npm run test; then
-    log "❌ Tests failed – update stopped."
+    log "❌ Tests failed – reverting changes."
+    git reset --hard "$ORIG_HEAD"
     STATUS["$REL_PATH"]="Error"
     continue
   fi
 
   log "→ Tests OK. Commit & Push…"
 
-  git add .
-  git commit -m "Dependencies updated"
-
-  # Rebase + Push
-  git pull --rebase
-  git push
+  if ! { git add . && git commit -m "Dependencies updated" && git pull --rebase && git push; }; then
+    log "❌ Git commit/push failed – reverting changes."
+    git reset --hard "$ORIG_HEAD"
+    STATUS["$REL_PATH"]="Error"
+    continue
+  fi
 
   log "✔️ Repo $REL_PATH esuccessfully updated"
   STATUS["$REL_PATH"]="Dependencies updated"
@@ -112,11 +120,18 @@ log "========================================"
 log "        Summary for all Repos"
 log "========================================"
 
+RED=$'\033[0;31m'
+NC=$'\033[0m'
+
 printf "\n%-40s | %s\n" "Repository" "Status"
 printf "%-40s-+-%s\n" "----------------------------------------" "-------------------------"
 
 for REL_PATH in "${REPOS[@]}"; do
-  printf "%-40s | %s\n" "$REL_PATH" "${STATUS[$REL_PATH]}"
+  if [[ "${STATUS[$REL_PATH]}" == "Error" ]]; then
+    printf "%-40s | ${RED}%s${NC}\n" "$REL_PATH" "${STATUS[$REL_PATH]}"
+  else
+    printf "%-40s | %s\n" "$REL_PATH" "${STATUS[$REL_PATH]}"
+  fi
 done
 
 printf "\n✨ Done.\n"
