@@ -56,15 +56,21 @@ log() {
 extract_github_repo() {
   local remote_url="$1"
   
-  # Handle HTTPS: https://github.com/owner/repo.git
-  if [[ $remote_url =~ https://github\.com/([^/]+)/(.+?)(?:\.git)?$ ]]; then
-    echo "${BASH_REMATCH[1]}/${BASH_REMATCH[2]%.git}"
+  # Handle HTTPS: https://github.com/owner/repo.git or https://github.com/owner/repo
+  if [[ $remote_url =~ https://github\.com/([^/]+)/(.+)$ ]]; then
+    local repo="${BASH_REMATCH[2]}"
+    # Remove .git suffix if present
+    repo="${repo%.git}"
+    echo "${BASH_REMATCH[1]}/$repo"
     return 0
   fi
   
-  # Handle SSH: git@github.com:owner/repo.git
-  if [[ $remote_url =~ git@github\.com:([^/]+)/(.+?)(?:\.git)?$ ]]; then
-    echo "${BASH_REMATCH[1]}/${BASH_REMATCH[2]%.git}"
+  # Handle SSH: git@github.com:owner/repo.git or git@github.com:owner/repo
+  if [[ $remote_url =~ git@github\.com:([^/]+)/(.+)$ ]]; then
+    local repo="${BASH_REMATCH[2]}"
+    # Remove .git suffix if present
+    repo="${repo%.git}"
+    echo "${BASH_REMATCH[1]}/$repo"
     return 0
   fi
   
