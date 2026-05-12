@@ -385,7 +385,7 @@ done
 print_summary_table "$CHECK_CI_ENABLED"
 
 # If CI checking is enabled, poll for results
-if [[ "$CHECK_CI_ENABLED" -eq 1 ]] && [[ ${#CI_TO_CHECK[@]} -gt 0 ]]; then
+if [[ "$CHECK_CI_ENABLED" -eq 1 ]] && [[ ${#CI_TO_CHECK[@]:-0} -gt 0 ]]; then
   log ""
   log "Waiting for CI results (up to 5 minutes)..."
   
@@ -414,7 +414,7 @@ if [[ "$CHECK_CI_ENABLED" -eq 1 ]] && [[ ${#CI_TO_CHECK[@]} -gt 0 ]]; then
   done
   
   # Poll remaining repos
-  if [[ ${#CI_TO_CHECK[@]} -gt 0 ]]; then
+  if [[ ${#CI_TO_CHECK[@]:-0} -gt 0 ]]; then
     poll_all_ci
   fi
   
