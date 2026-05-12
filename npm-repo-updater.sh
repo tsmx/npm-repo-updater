@@ -206,12 +206,16 @@ poll_single_repo() {
   done
 }
 
-# Main CI polling loop (non-blocking background)
+# Main CI polling loop with in-place table updates
 poll_all_ci() {
   local start_time
   start_time=$(date +%s)
   local timeout=300  # 5 minutes
   local poll_interval=10
+  local line_count=$((${#REPOS[@]} + 3))  # header + separator + repos
+  
+  # Save cursor position
+  tput sc 2>/dev/null || true
   
   while true; do
     local current_time
@@ -226,18 +230,17 @@ poll_all_ci() {
     # Poll each repo that needs checking
     local any_running=0
     for REL_PATH in "${!CI_TO_CHECK[@]}"; do
-      local owner_repo="${CI_TO_CHECK[$REL_PATH]}"
-      local sha="${COMMIT_SHA[$REL_PATH]}"
+      owner_repo="${CI_TO_CHECK[$REL_PATH]}"
+      sha="${COMMIT_SHA[$REL_PATH]}"
       
       if [[ -z "$owner_repo" ]] || [[ -z "$sha" ]]; then
         continue
       fi
       
-      local owner="${owner_repo%/*}"
-      local repo="${owner_repo#*/}"
+      owner="${owner_repo%/*}"
+      repo="${owner_repo#*/}"
       
       # Query CI status
-      local new_status
       new_status=$(determine_ci_status "$owner" "$repo" "$sha" 2>/dev/null) || new_status="No CI"
       
       # Update if changed
@@ -251,8 +254,11 @@ poll_all_ci() {
       fi
     done
     
-    # Redraw table with updated statuses
+    # Restore cursor to saved position and redraw table in place
+    tput rc 2>/dev/null || true
+    printf '\033[0J'  # Clear from cursor to end of display
     print_summary_table "$CHECK_CI_ENABLED"
+    tput sc 2>/dev/null || true  # Save new cursor position
     
     # If nothing is running, we can exit early
     if [[ $any_running -eq 0 ]]; then
