@@ -347,15 +347,13 @@ for REL_PATH in "${REPOS[@]}"; do
   
   # Track commit SHA for CI checking if enabled
   if [[ "$CHECK_CI_ENABLED" -eq 1 ]]; then
-    local commit_sha
     commit_sha=$(git rev-parse HEAD)
     COMMIT_SHA["$REL_PATH"]="$commit_sha"
     
     # Extract GitHub repo from remote
-    local remote_url
     remote_url=$(git remote get-url origin 2>/dev/null) || remote_url=""
     
-    if local github_repo=$(extract_github_repo "$remote_url"); then
+    if github_repo=$(extract_github_repo "$remote_url"); then
       CI_TO_CHECK["$REL_PATH"]="$github_repo"
       CI_STATUS["$REL_PATH"]="CI running"
     else
