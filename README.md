@@ -21,6 +21,17 @@ After all repositories have been processed, a summary table is printed showing e
 - Git
 - Node.js / npm
 - Each repository must have a `test` script defined in its `package.json`
+- (Optional) GitHub CLI (`gh`) for `--check-ci` functionality
+
+### Setting up GitHub CLI for CI Status Checking
+
+To use the `--check-ci` flag, you need the GitHub CLI installed and authenticated:
+
+1. **Install GitHub CLI:** Follow instructions at https://cli.github.com
+2. **Authenticate:** Run `gh auth login` and follow the prompts
+3. **Verify:** Run `gh auth status` to confirm authentication
+
+The GitHub CLI securely manages authentication tokens and handles them automatically, so you don't need to manage tokens manually.
 
 > **No tests in a repo?** The script requires `npm run test` to exit with code `0`. If a repository has no test suite, add a no-op test script to its `package.json` so the update pipeline can still run safely:
 >
@@ -64,6 +75,12 @@ Tips:
 
 # With logging to a file
 ./npm-repo-updater.sh --log /var/log/npm-repo-updater.log
+
+# With CI status checking (requires GitHub CLI)
+./npm-repo-updater.sh --check-ci
+
+# With both logging and CI status checking
+./npm-repo-updater.sh --log /var/log/npm-repo-updater.log --check-ci
 ```
 
 ### Options
@@ -71,6 +88,7 @@ Tips:
 | Option | Description |
 |---|---|
 | `--log <file>` | Append a timestamped log of all output to the given file. |
+| `--check-ci` | After pushing updates, check GitHub Actions CI status for each commit (requires `gh` CLI to be installed and authenticated). |
 
 ## Error handling
 
@@ -89,6 +107,18 @@ Possible status values per repository:
 | `Dependencies updated` | `npm update` produced changes, tests passed, and changes were pushed successfully. |
 | `No updates` | `npm update` ran successfully but `package-lock.json` was unchanged — nothing to commit. |
 | `Error` | A failure occurred (npm, tests, or git). Changes were reverted. |
+
+### CI Status (when using `--check-ci`)
+
+When running with the `--check-ci` flag, an additional "CI Status" column is displayed showing the GitHub Actions workflow status:
+
+| CI Status | Meaning |
+|---|---|
+| `CI passed` | All GitHub Actions workflows for the pushed commit have completed successfully. |
+| `CI failed` | At least one GitHub Actions workflow failed, was cancelled, or timed out. |
+| `CI running` | Workflows are still running after the 5-minute polling timeout. |
+| `No CI` | No GitHub Actions workflows were found for the commit (repo may not have workflows configured). |
+| `-` | No push was made for this repo (status is `Error` or `No updates`). |
 
 ## Logging
 
