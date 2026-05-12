@@ -394,18 +394,17 @@ if [[ "$CHECK_CI_ENABLED" -eq 1 ]] && [[ ${#CI_TO_CHECK[@]} -gt 0 ]]; then
   
   # Initial pass: detect "No CI" immediately for repos with no workflows
   for REL_PATH in "${!CI_TO_CHECK[@]}"; do
-    local owner_repo="${CI_TO_CHECK[$REL_PATH]}"
-    local sha="${COMMIT_SHA[$REL_PATH]}"
+    owner_repo="${CI_TO_CHECK[$REL_PATH]}"
+    sha="${COMMIT_SHA[$REL_PATH]}"
     
     if [[ -z "$owner_repo" ]] || [[ -z "$sha" ]]; then
       continue
     fi
     
-    local owner="${owner_repo%/*}"
-    local repo="${owner_repo#*/}"
+    owner="${owner_repo%/*}"
+    repo="${owner_repo#*/}"
     
     # Quick check: if no workflows exist, mark immediately
-    local initial_status
     initial_status=$(determine_ci_status "$owner" "$repo" "$sha" 2>/dev/null) || initial_status="No CI"
     
     if [[ "$initial_status" == "No CI" ]]; then
