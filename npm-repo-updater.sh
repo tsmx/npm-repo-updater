@@ -384,50 +384,8 @@ for REL_PATH in "${REPOS[@]}"; do
 done
 
 # Print initial summary table
-print_summary_table "$CHECK_CI_ENABLED"
-
-# If CI checking is enabled, poll for results
-if [[ "$CHECK_CI_ENABLED" -eq 1 ]] && [[ $CI_TO_CHECK_COUNT -gt 0 ]]; then
-  log ""
-  log "Waiting for CI results (up to 5 minutes)..."
-  
-  # Wait 5-10 seconds for GitHub to create workflows
-  sleep 7
-  
-  # Initial pass: detect "No CI" immediately for repos with no workflows
-  for REL_PATH in "${!CI_TO_CHECK[@]}"; do
-    owner_repo="${CI_TO_CHECK[$REL_PATH]}"
-    sha="${COMMIT_SHA[$REL_PATH]}"
-    
-    if [[ -z "$owner_repo" ]] || [[ -z "$sha" ]]; then
-      continue
-    fi
-    
-    owner="${owner_repo%/*}"
-    repo="${owner_repo#*/}"
-    
-    # Quick check: if no workflows exist, mark immediately
-    initial_status=$(determine_ci_status "$owner" "$repo" "$sha" 2>/dev/null) || initial_status="No CI"
-    
-    if [[ "$initial_status" == "No CI" ]]; then
-      CI_STATUS["$REL_PATH"]="No CI"
-      unset 'CI_TO_CHECK[$REL_PATH]'
-      CI_TO_CHECK_COUNT=$((CI_TO_CHECK_COUNT - 1))
-    fi
-  done
-  
-  # Poll remaining repos
-  if [[ $CI_TO_CHECK_COUNT -gt 0 ]]; then
-    poll_all_ci
-  fi
-  
-  log ""
-  log "========================================"
-  log "        Final Summary with CI Status"
-  log "========================================"
-  print_summary_table "$CHECK_CI_ENABLED"
-else
-  # No CI checking, use original format
+if [[ "$CHECK_CI_ENABLED" -eq 0 ]]; then
+  # No CI checking, print simple table
   printf "\n%-40s | %s\n" "Repository" "Status"
   printf "%-40s-+-%s\n" "----------------------------------------" "-------------------------"
   
@@ -438,6 +396,51 @@ else
       printf "%-40s | %s\n" "$REL_PATH" "${STATUS[$REL_PATH]}"
     fi
   done
+else
+  # CI checking enabled, print table with CI column
+  print_summary_table "$CHECK_CI_ENABLED"
+  
+  # If CI checking is enabled and we have repos to check, poll for results
+  if [[ $CI_TO_CHECK_COUNT -gt 0 ]]; then
+    log ""
+    log "Waiting for CI results (up to 5 minutes)..."
+    
+    # Wait 5-10 seconds for GitHub to create workflows
+    sleep 7
+    
+    # Initial pass: detect "No CI" immediately for repos with no workflows
+    for REL_PATH in "${!CI_TO_CHECK[@]}"; do
+      owner_repo="${CI_TO_CHECK[$REL_PATH]}"
+      sha="${COMMIT_SHA[$REL_PATH]}"
+      
+      if [[ -z "$owner_repo" ]] || [[ -z "$sha" ]]; then
+        continue
+      fi
+      
+      owner="${owner_repo%/*}"
+      repo="${owner_repo#*/}"
+      
+      # Quick check: if no workflows exist, mark immediately
+      initial_status=$(determine_ci_status "$owner" "$repo" "$sha" 2>/dev/null) || initial_status="No CI"
+      
+      if [[ "$initial_status" == "No CI" ]]; then
+        CI_STATUS["$REL_PATH"]="No CI"
+        unset 'CI_TO_CHECK[$REL_PATH]'
+        CI_TO_CHECK_COUNT=$((CI_TO_CHECK_COUNT - 1))
+      fi
+    done
+    
+    # Poll remaining repos
+    if [[ $CI_TO_CHECK_COUNT -gt 0 ]]; then
+      poll_all_ci
+    fi
+    
+    log ""
+    log "========================================"
+    log "        Final Summary with CI Status"
+    log "========================================"
+    print_summary_table "$CHECK_CI_ENABLED"
+  fi
 fi
 
 printf "\n✨ Done.\n"
