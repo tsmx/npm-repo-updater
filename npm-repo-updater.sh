@@ -398,6 +398,8 @@ else
   # CI checking enabled
   if [[ $CI_TO_CHECK_COUNT -gt 0 ]]; then
     # Wait for GitHub to register new workflow runs before first status check
+    log ""
+    log "Fetching CI status, please wait..."
     sleep 7
     
     # Initial pass: fetch current CI status for all repos before printing the table.
