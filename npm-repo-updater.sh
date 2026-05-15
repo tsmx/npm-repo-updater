@@ -434,13 +434,13 @@ else
       log ""
       log "Waiting for CI results (up to 5 minutes)..."
       poll_all_ci
+
+      log ""
+      log "========================================"
+      log "        Final Summary with CI Status"
+      log "========================================"
+      print_summary_table "$CHECK_CI_ENABLED"
     fi
-    
-    log ""
-    log "========================================"
-    log "        Final Summary with CI Status"
-    log "========================================"
-    print_summary_table "$CHECK_CI_ENABLED"
   else
     # No repos needed CI checking at all — print table directly
     printf "\n"
