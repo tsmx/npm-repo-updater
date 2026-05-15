@@ -133,32 +133,37 @@ determine_ci_status() {
 # Print summary table with optional CI Status column
 print_summary_table() {
   local show_ci="$1"
-  
+  local in_place="${2:-0}"  # 1 = rewriting in place (no leading newline, overwrite lines)
+
+  if [[ "$in_place" -eq 0 ]]; then
+    printf "\n"
+  fi
+
   if [[ "$show_ci" -eq 1 ]]; then
-    printf "\n%-40s | %-25s | %s\n" "Repository" "Dependencies" "CI Status"
-    printf "%-40s-+-%-25s-+-%s\n" "----------------------------------------" "-------------------------" "---------------------"
+    printf "%-40s | %-25s | %s\033[K\n" "Repository" "Dependencies" "CI Status"
+    printf "%-40s-+-%-25s-+-%s\033[K\n" "----------------------------------------" "-------------------------" "---------------------"
   else
-    printf "\n%-40s | %s\n" "Repository" "Status"
-    printf "%-40s-+-%s\n" "----------------------------------------" "-------------------------"
+    printf "%-40s | %s\033[K\n" "Repository" "Status"
+    printf "%-40s-+-%s\033[K\n" "----------------------------------------" "-------------------------"
   fi
   
   for REL_PATH in "${REPOS[@]}"; do
     local dep_status="${STATUS[$REL_PATH]}"
     local ci_status="${CI_STATUS[$REL_PATH]:-}"
-    
+
     if [[ "$show_ci" -eq 1 ]]; then
       # Color code: red for Error or CI failed, normal for others
       if [[ "$dep_status" == "Error" ]] || [[ "$ci_status" == "CI failed" ]]; then
-        printf "%-40s | ${RED}%-25s${NC} | ${RED}%s${NC}\n" "$REL_PATH" "$dep_status" "$ci_status"
+        printf "%-40s | ${RED}%-25s${NC} | ${RED}%s${NC}\033[K\n" "$REL_PATH" "$dep_status" "$ci_status"
       else
-        printf "%-40s | %-25s | %s\n" "$REL_PATH" "$dep_status" "$ci_status"
+        printf "%-40s | %-25s | %s\033[K\n" "$REL_PATH" "$dep_status" "$ci_status"
       fi
     else
       # Original single column format
       if [[ "$dep_status" == "Error" ]]; then
-        printf "%-40s | ${RED}%s${NC}\n" "$REL_PATH" "$dep_status"
+        printf "%-40s | ${RED}%s${NC}\033[K\n" "$REL_PATH" "$dep_status"
       else
-        printf "%-40s | %s\n" "$REL_PATH" "$dep_status"
+        printf "%-40s | %s\033[K\n" "$REL_PATH" "$dep_status"
       fi
     fi
   done
@@ -212,11 +217,7 @@ poll_all_ci() {
   start_time=$(date +%s)
   local timeout=300  # 5 minutes
   local poll_interval=10
-  local line_count=$((${#REPOS[@]} + 3))  # header + separator + repos
-  
-  # Save cursor position
-  tput sc 2>/dev/null || true
-  
+
   while true; do
     local current_time
     current_time=$(date +%s)
@@ -254,11 +255,11 @@ poll_all_ci() {
       fi
     done
     
-    # Restore cursor to saved position and redraw table in place
+    # Restore cursor to saved position (top of table), redraw rows in place,
+    # then re-save position at the top of the table for the next iteration
     tput rc 2>/dev/null || true
-    printf '\033[0J'  # Clear from cursor to end of display
-    print_summary_table "$CHECK_CI_ENABLED"
-    tput sc 2>/dev/null || true  # Save new cursor position
+    tput sc 2>/dev/null || true  # re-save at top of table before overwriting
+    print_summary_table "$CHECK_CI_ENABLED" 1
     
     # If nothing is running, we can exit early
     if [[ $any_running -eq 0 ]]; then
@@ -391,30 +392,17 @@ done
 
 # Print initial summary table
 if [[ "$CHECK_CI_ENABLED" -eq 0 ]]; then
-  # No CI checking, print simple table
-  printf "\n%-40s | %s\n" "Repository" "Status"
-  printf "%-40s-+-%s\n" "----------------------------------------" "-------------------------"
-  
-  for REL_PATH in "${REPOS[@]}"; do
-    if [[ "${STATUS[$REL_PATH]}" == "Error" ]]; then
-      printf "%-40s | ${RED}%s${NC}\n" "$REL_PATH" "${STATUS[$REL_PATH]}"
-    else
-      printf "%-40s | %s\n" "$REL_PATH" "${STATUS[$REL_PATH]}"
-    fi
-  done
+  # No CI checking — print table directly (no in-place updates needed)
+  print_summary_table 0
 else
-  # CI checking enabled, print table with CI column
-  print_summary_table "$CHECK_CI_ENABLED"
-  
-  # If CI checking is enabled and we have repos to check, poll for results
+  # CI checking enabled
   if [[ $CI_TO_CHECK_COUNT -gt 0 ]]; then
-    log ""
-    log "Waiting for CI results (up to 5 minutes)..."
-    
-    # Wait 5-10 seconds for GitHub to create workflows
+    # Wait for GitHub to register new workflow runs before first status check
     sleep 7
     
-    # Initial pass: detect "No CI" immediately for repos with no workflows
+    # Initial pass: fetch current CI status for all repos before printing the table.
+    # This ensures the first render already shows accurate statuses (passed, No CI, etc.)
+    # rather than showing "CI running" for everything.
     for REL_PATH in "${!CI_TO_CHECK[@]}"; do
       owner_repo="${CI_TO_CHECK[$REL_PATH]}"
       sha="${COMMIT_SHA[$REL_PATH]}"
@@ -426,18 +414,25 @@ else
       owner="${owner_repo%/*}"
       repo="${owner_repo#*/}"
       
-      # Quick check: if no workflows exist, mark immediately
       initial_status=$(determine_ci_status "$owner" "$repo" "$sha" 2>/dev/null) || initial_status="No CI"
+      CI_STATUS["$REL_PATH"]="$initial_status"
       
-      if [[ "$initial_status" == "No CI" ]]; then
-        CI_STATUS["$REL_PATH"]="No CI"
+      # Remove from polling set if already in a final state
+      if [[ "$initial_status" != "CI running" ]]; then
         unset 'CI_TO_CHECK[$REL_PATH]'
         CI_TO_CHECK_COUNT=$((CI_TO_CHECK_COUNT - 1))
       fi
     done
     
-    # Poll remaining repos
+    # Print the table with accurate initial statuses
+    printf "\n"  # blank line before table
+    tput sc 2>/dev/null || true  # save cursor position at start of table
+    print_summary_table "$CHECK_CI_ENABLED" 1
+    
+    # Continue polling repos still running
     if [[ $CI_TO_CHECK_COUNT -gt 0 ]]; then
+      log ""
+      log "Waiting for CI results (up to 5 minutes)..."
       poll_all_ci
     fi
     
@@ -446,6 +441,10 @@ else
     log "        Final Summary with CI Status"
     log "========================================"
     print_summary_table "$CHECK_CI_ENABLED"
+  else
+    # No repos needed CI checking at all — print table directly
+    printf "\n"
+    print_summary_table "$CHECK_CI_ENABLED" 1
   fi
 fi
 
