@@ -217,6 +217,9 @@ poll_all_ci() {
   start_time=$(date +%s)
   local timeout=300  # 5 minutes
   local poll_interval=10
+  # header + separator + one line per repo
+  local table_lines=$(( ${#REPOS[@]} + 2 ))
+  local first_draw=1
 
   while true; do
     local current_time
@@ -255,10 +258,15 @@ poll_all_ci() {
       fi
     done
     
-    # Restore cursor to saved position (top of table), redraw rows in place,
-    # then re-save position at the top of the table for the next iteration
-    tput rc 2>/dev/null || true
-    tput sc 2>/dev/null || true  # re-save at top of table before overwriting
+    # Move cursor up to the top of the table and redraw in place.
+    # On the first draw we also need to jump over the blank line and
+    # "Waiting for CI results..." line that were printed after the table.
+    if [[ $first_draw -eq 1 ]]; then
+      printf "\033[%dA\r" $(( table_lines + 2 ))
+      first_draw=0
+    else
+      printf "\033[%dA\r" "$table_lines"
+    fi
     print_summary_table "$CHECK_CI_ENABLED" 1
     
     # If nothing is running, we can exit early
@@ -428,7 +436,6 @@ else
     
     # Print the table with accurate initial statuses
     printf "\n"  # blank line before table
-    tput sc 2>/dev/null || true  # save cursor position at start of table
     print_summary_table "$CHECK_CI_ENABLED" 1
     
     # Continue polling repos still running
