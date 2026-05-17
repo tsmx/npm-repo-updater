@@ -131,6 +131,50 @@ determine_ci_status() {
 }
 
 # Print summary table with optional CI Status column
+# Pad a string to a fixed display width, accounting for wide (2-cell) unicode characters.
+# Usage: pad_to_width <string> <display_width>
+pad_to_width() {
+  local str="$1"
+  local target="$2"
+  local display=0
+  local char
+  # Count display width: emoji/wide chars = 2 cells, others = 1
+  while IFS= read -rn1 char; do
+    local bytes
+    bytes=$(printf "%s" "$char" | wc -c)
+    if [[ $bytes -ge 3 ]]; then
+      display=$(( display + 2 ))
+    else
+      display=$(( display + 1 ))
+    fi
+  done <<< "$str"
+  local pad=$(( target - display ))
+  printf "%s%*s" "$str" "$pad" ""
+}
+
+# Map a dependency status string to its emoji-prefixed display string
+format_dep_status() {
+  local icon_text
+  case "$1" in
+    "Dependencies updated") icon_text="✅ Dependencies updated" ;;
+    "No updates")           icon_text="🔘 No updates" ;;
+    "Error")                icon_text="❌ Error" ;;
+    *)                      icon_text="$1" ;;
+  esac
+  pad_to_width "$icon_text" 25
+}
+
+# Map a CI status string to its emoji-prefixed display string
+format_ci_status() {
+  case "$1" in
+    "CI passed")  printf "✅ CI passed" ;;
+    "CI failed")  printf "❌ CI failed" ;;
+    "CI running") printf "⏭️  CI running" ;;
+    "No CI")      printf "🔘 No CI" ;;
+    *)            printf "%s" "$1" ;;  # "-" or empty — no icon
+  esac
+}
+
 print_summary_table() {
   local show_ci="$1"
   local in_place="${2:-0}"  # 1 = rewriting in place (no leading newline, overwrite lines)
@@ -150,20 +194,21 @@ print_summary_table() {
   for REL_PATH in "${REPOS[@]}"; do
     local dep_status="${STATUS[$REL_PATH]}"
     local ci_status="${CI_STATUS[$REL_PATH]:-}"
+    local dep_display ci_display
+    dep_display="$(format_dep_status "$dep_status")"
+    ci_display="$(format_ci_status "$ci_status")"
 
     if [[ "$show_ci" -eq 1 ]]; then
-      # Color code: red for Error or CI failed, normal for others
       if [[ "$dep_status" == "Error" ]] || [[ "$ci_status" == "CI failed" ]]; then
-        printf "%-40s | ${RED}%-25s${NC} | ${RED}%s${NC}\033[K\n" "$REL_PATH" "$dep_status" "$ci_status"
+        printf "%-40s | ${RED}%s${NC} | ${RED}%s${NC}\033[K\n" "$REL_PATH" "$dep_display" "$ci_display"
       else
-        printf "%-40s | %-25s | %s\033[K\n" "$REL_PATH" "$dep_status" "$ci_status"
+        printf "%-40s | %s | %s\033[K\n" "$REL_PATH" "$dep_display" "$ci_display"
       fi
     else
-      # Original single column format
       if [[ "$dep_status" == "Error" ]]; then
-        printf "%-40s | ${RED}%s${NC}\033[K\n" "$REL_PATH" "$dep_status"
+        printf "%-40s | ${RED}%s${NC}\033[K\n" "$REL_PATH" "$dep_display"
       else
-        printf "%-40s | %s\033[K\n" "$REL_PATH" "$dep_status"
+        printf "%-40s | %s\033[K\n" "$REL_PATH" "$dep_display"
       fi
     fi
   done
