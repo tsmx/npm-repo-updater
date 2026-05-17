@@ -228,7 +228,7 @@ poll_all_ci() {
     
     # Check if timeout reached
     if [[ $elapsed -ge $timeout ]]; then
-      break
+      return 1  # signal: timed out, some repos may still be running
     fi
     
     # Poll each repo that needs checking
@@ -442,13 +442,14 @@ else
     if [[ $CI_TO_CHECK_COUNT -gt 0 ]]; then
       log ""
       log "Waiting for CI results (up to 5 minutes)..."
-      poll_all_ci
-
-      log ""
-      log "========================================"
-      log "        Final Summary with CI Status"
-      log "========================================"
-      print_summary_table "$CHECK_CI_ENABLED"
+      if ! poll_all_ci; then
+        # Timed out — some repos are still running, print a final snapshot
+        log ""
+        log "========================================"
+        log "        Final Summary with CI Status"
+        log "========================================"
+        print_summary_table "$CHECK_CI_ENABLED"
+      fi
     fi
   else
     # No repos needed CI checking at all — print table directly
