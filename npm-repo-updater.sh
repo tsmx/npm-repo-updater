@@ -171,7 +171,8 @@ format_ci_status() {
     "CI failed")  printf "❌ CI failed" ;;
     "CI running") printf "⏭️  CI running" ;;
     "No CI")      printf "🔘 No CI" ;;
-    *)            printf "%s" "$1" ;;  # "-" or empty — no icon
+    "-")          printf "🔘" ;;
+    *)            printf "%s" "$1" ;;
   esac
 }
 
