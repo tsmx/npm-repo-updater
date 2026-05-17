@@ -185,7 +185,9 @@ print_summary_table() {
   fi
 
   if [[ "$show_ci" -eq 1 ]]; then
-    printf "%-40s | %-25s | %s\033[K\n" "Repository" "Dependencies" "CI Status"
+    local dep_header
+    dep_header="$(pad_to_width "Dependencies" 25)"
+    printf "%-40s | %s | %s\033[K\n" "Repository" "$dep_header" "CI Status"
     printf "%-40s-+-%-25s-+-%s\033[K\n" "----------------------------------------" "-------------------------" "---------------------"
   else
     printf "%-40s | %s\033[K\n" "Repository" "Status"
