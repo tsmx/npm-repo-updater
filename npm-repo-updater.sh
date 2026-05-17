@@ -169,7 +169,7 @@ format_ci_status() {
   case "$1" in
     "CI passed")  printf "✅ CI passed" ;;
     "CI failed")  printf "❌ CI failed" ;;
-    "CI running") printf "⏭ CI running" ;;
+    "CI running") printf "⏳ CI running" ;;
     "No CI")      printf "🔘 No CI" ;;
     "-")          printf "🔘 -" ;;
     *)            printf "%s" "$1" ;;
