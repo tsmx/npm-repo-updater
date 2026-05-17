@@ -185,10 +185,12 @@ print_summary_table() {
   fi
 
   if [[ "$show_ci" -eq 1 ]]; then
-    local dep_header
+    local dep_header dep_sep dep_bytes
     dep_header="$(pad_to_width "Dependencies" 25)"
+    dep_bytes=$(printf "%s" "$dep_header" | wc -c)
+    dep_sep=$(printf "%-${dep_bytes}s" "" | tr ' ' '-')
     printf "%-40s | %s | %s\033[K\n" "Repository" "$dep_header" "CI Status"
-    printf "%-40s-+-%-25s-+-%s\033[K\n" "----------------------------------------" "-------------------------" "---------------------"
+    printf "%-40s-+-%s-+-%s\033[K\n" "----------------------------------------" "$dep_sep" "---------------------"
   else
     printf "%-40s | %s\033[K\n" "Repository" "Status"
     printf "%-40s-+-%s\033[K\n" "----------------------------------------" "-------------------------"
