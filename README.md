@@ -4,14 +4,24 @@ A Bash script that automates `npm` dependency updates across multiple local Git 
 
 ## How it works
 
-`npm-repo-updater.sh` iterates over a list of local repository paths defined in `repos.conf`. For each repository it:
+`npm-repo-updater.sh` iterates over a list of local repository paths defined in `repos.conf` and processes each one through the following pipeline:
 
-1. Records the current Git `HEAD` as a restore point.
-2. Runs `npm update` to update all dependencies within the allowed semver ranges.
-3. Checks whether `package-lock.json` was actually modified. If not, the repo is skipped (no unnecessary commits).
-4. Runs `npm run test` to verify that the updated dependencies don't break anything.
-5. Commits the changes with the message `"Dependencies updated"`, rebases against the remote, and pushes.
-6. Reverts the working tree to the recorded `HEAD` at any point of failure (step 2, 4, or 5) so no partial or broken state is left behind.
+```mermaid
+flowchart TD
+    A([Next repo in repos.conf]) --> B[Record current HEAD\nas restore point]
+    B --> C[npm update]
+    C -- failure --> E1[git reset --hard\nrestore point]
+    E1 --> F1([Mark: Error])
+    C -- success --> D{package-lock.json\nmodified?}
+    D -- no --> G([Mark: No updates])
+    D -- yes --> H[npm run test]
+    H -- failure --> E2[git reset --hard\nrestore point]
+    E2 --> F2([Mark: Error])
+    H -- success --> I[Commit, rebase & push]
+    I -- failure --> E3[git reset --hard\nrestore point]
+    E3 --> F3([Mark: Error])
+    I -- success --> J([Mark: Dependencies updated])
+```
 
 After all repositories have been processed, a summary table is printed showing each repo's outcome.
 
@@ -143,9 +153,25 @@ At the end of each run, a table is printed to stdout:
 ```
 Repository                               | Status
 -----------------------------------------+--------------------------
-../my-api                                | Dependencies updated
-../frontend-app                          | No updates
-../shared-utils                          | Error
+my-api                                   | ✅ Dependencies updated
+frontend-app                             | 🔘 No updates
+shared-utils                             | ❌ Error
+```
+
+### With `--check-ci`
+
+When using the `--check-ci` flag, an additional CI Status column is shown:
+
+```
+Repository                               | Dependencies             | CI Status
+-----------------------------------------+--------------------------+----------------------
+my-api                                   | ✅ Dependencies updated  | ✅ CI passed
+frontend-app                             | 🔘 No updates            | 🔘 -
+shared-utils                             | ❌ Error                 | 🔘 -
+legacy-service                           | ✅ Dependencies updated  | 🔘 No CI
+worker-service                           | ✅ Dependencies updated  | ❌ CI failed
+org/billing-api                          | ✅ Dependencies updated  | ✅ CI passed
+org/auth-service                         | 🔘 No updates            | 🔘 -
 ```
 
 Repositories with status `Error` are highlighted in red in the terminal output.

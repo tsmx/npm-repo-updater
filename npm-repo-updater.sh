@@ -496,13 +496,18 @@ else
         # Timed out — some repos are still running, note it below the table
         log ""
         log "CI polling timed out. Some repos may still be running."
+        printf "\n✨ Done.\n"
+      else
+        # Move cursor down past the blank line, then overwrite "Waiting for CI results..." with "Done."
+        printf "\033[2B\r\033[K✨ Done.\n"
       fi
+    else
+      printf "\n✨ Done.\n"
     fi
   else
     # No repos needed CI checking at all — print table directly
     printf "\n"
     print_summary_table "$CHECK_CI_ENABLED" 1
+    printf "\n✨ Done.\n"
   fi
 fi
-
-printf "\n✨ Done.\n"
