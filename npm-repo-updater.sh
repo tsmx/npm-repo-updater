@@ -28,6 +28,11 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# Convert relative log file path to absolute to avoid issues with cd commands
+if [[ -n "$LOGFILE" ]] && [[ ! "$LOGFILE" = /* ]]; then
+  LOGFILE="$(cd "$(dirname "$LOGFILE")" && pwd)/$(basename "$LOGFILE")"
+fi
+
 # Check if gh CLI is available (if CI checking requested)
 if [[ "$CHECK_CI" -eq 1 ]]; then
   if ! command -v gh &>/dev/null; then
@@ -435,11 +440,6 @@ for REL_PATH in "${REPOS[@]}"; do
     fi
   fi
 done
-
-log ""
-log "========================================"
-log "        Summary for all Repos"
-log "========================================"
 
 # Initialize CI statuses for repos without updates
 for REL_PATH in "${REPOS[@]}"; do
