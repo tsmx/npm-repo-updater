@@ -1,6 +1,6 @@
 # npm-repo-updater
 
-A Bash script that automates `npm` dependency updates across multiple local Git repositories — including test verification, safe rollback on failure and CI/CD status check for GitHub actions.
+A Bash script that automates `npm` dependency updates across multiple local Git repositories — including 🧪 test verification, 🛡️ safe rollback on failure and 🔍 CI/CD status check for GitHub Actions.
 
 ## How it works
 
