@@ -2,8 +2,8 @@
 
 A Bash script that automates `npm` dependency updates across multiple local Git repositories — including:
 
-🧪 test verification
-🛡️ safe rollback on failure
+🧪 test verification<br>
+🛡️ safe rollback on failure<br>
 🔍 CI/CD status check for GitHub Actions
 
 ## How it works
