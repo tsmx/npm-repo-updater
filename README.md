@@ -6,7 +6,7 @@ A Bash script that automates `npm` dependency updates across multiple local Git 
 🛡️ safe rollback on failure<br>
 🔍 CI/CD status check for GitHub Actions
 
-## Usage
+## Quick Guide
 
 1. Download the script:
 
