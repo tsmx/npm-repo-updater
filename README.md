@@ -6,30 +6,33 @@ A Bash script that automates `npm` dependency updates across multiple local Git 
 🛡️ safe rollback on failure<br>
 🔍 CI/CD status check for GitHub Actions
 
-## Installation
+## Usage
 
-1. **Download the script:**
-   ```bash
-   curl -O https://raw.githubusercontent.com/tsmx/npm-repo-updater/master/npm-repo-updater.sh
-   chmod +x npm-repo-updater.sh
-   ```
+1. Download the script:
 
-2. **Create `repos.conf` in the same directory:**
-   ```bash
-   cat > repos.conf <<EOF
-   # List repository paths relative to this directory
-   projects/my-api
-   projects/frontend-app
-   projects/shared-utils
-   EOF
-   ```
+```bash
+curl -O https://raw.githubusercontent.com/tsmx/npm-repo-updater/master/npm-repo-updater.sh
+chmod +x npm-repo-updater.sh
+```
 
-3. **Run:**
-   ```bash
-   ./npm-repo-updater.sh
-   ```
+2. Create `repos.conf` in the same directory:
+
+```bash
+cat > repos.conf <<EOF
+# List repository paths relative to this directory
+projects/my-api
+projects/frontend-app
+projects/shared-utils
+EOF
+```
+
+3. Run:
+
+```bash
+./npm-repo-updater.sh
+```
    
-   See [Usage](#usage) for available flags (`--log`, `--check-ci`).
+See [Usage](#usage) for available flags (`--log`, `--check-ci`).
 
 ## How it works
 
